@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap');
+
+@layer base {
+  html {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-bg-deep text-txt min-h-screen;
+  }
+}
+
+@layer components {
+  /* Metric card top-line accent */
+  .metric-line-teal { @apply before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-teal; }
+  .metric-line-green { @apply before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-aimee-green; }
+  .metric-line-indigo { @apply before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-aimee-indigo; }
+  .metric-line-amber { @apply before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-aimee-amber; }
+  .metric-line-rose { @apply before:absolute before:top-0 before:left-0 before:right-0 before:h-[3px] before:bg-aimee-rose; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
