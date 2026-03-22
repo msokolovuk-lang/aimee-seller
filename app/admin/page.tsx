@@ -249,7 +249,10 @@ export default function AdminPage() {
                               </div>
                             )}
                           </td>
-                          <td style={{padding:'12px 8px'}}><code style={{fontSize:10,color:C.muted,background:C.card,padding:'2px 6px',borderRadius:4}}>{s.seller_id}</code></td>
+                          <td style={{padding:'12px 8px'}}>
+                          <code style={{fontSize:10,color:C.muted,background:C.card,padding:'2px 4px',borderRadius:4,display:'block',marginBottom:2}}>{s.seller_id}</code>
+                          <code style={{fontSize:10,color:'#059669',background:'#f0fdf4',padding:'2px 4px',borderRadius:4,display:'block'}}>{s.password_hash?.replace('PLAIN:','') || '—'}</code>
+                        </td>
                           <td style={{padding:'12px 8px',fontSize:13,fontWeight:700,color:stats.products>0?C.text:C.red,textAlign:'center'}}>{stats.products}</td>
                           <td style={{padding:'12px 8px',fontSize:13,fontWeight:700,color:stats.orders>0?C.ok:C.muted,textAlign:'center'}}>{stats.orders}</td>
                           <td style={{padding:'12px 8px',fontSize:12,fontWeight:700,color:C.accent,whiteSpace:'nowrap'}}>₽{(stats.revenue/1000).toFixed(1)}K</td>
@@ -441,6 +444,7 @@ export default function AdminPage() {
                 {[
                   {label:'💰 Финансы платформы',url:'/admin/finance'},
                   {label:'🔗 Интеграции',url:'/admin/integrations'},
+                  {label:'🚀 Онбординг',url:'https://seller.getaimee.ru/onboarding'},
                   {label:'🏪 Seller MVP (прод)',url:'https://seller.getaimee.ru'},
                   {label:'🛍️ Buyer PWA (прод)',url:'https://buyer.getaimee.ru'},
                   {label:'🧪 Seller (тест)',url:'https://aimee-seller.vercel.app'},

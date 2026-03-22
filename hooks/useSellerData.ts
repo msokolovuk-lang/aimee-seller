@@ -76,7 +76,7 @@ export function useSellerData() {
     if (!id) return
     setLoading(true)
     try {
-      const sellerFilter = [id, 'demo'].filter(Boolean)
+      const sellerFilter = [id].filter(Boolean)
 
       // Заказы
       const { data: ordersData } = await supabase
@@ -157,7 +157,7 @@ export function useSellerData() {
       .channel('seller-activity-' + id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'buyer_activity' }, (payload) => {
         const ev = payload.new as ActivityEvent
-        const allowed = [id, 'demo', '']
+        const allowed = [id]
         if (!allowed.includes(ev.seller_id)) return
         setActivity(prev => [ev, ...prev].slice(0, 200))
         // пересчитываем статистику при новом событии
