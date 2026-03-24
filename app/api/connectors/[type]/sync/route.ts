@@ -1,45 +1,29 @@
 /**
  * POST /api/connectors/[type]/sync
- * Ручной или автоматический sync коннектора
+ * Sync коннектора — Фаза 1 + 2
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { MoyskladConnector } from '@/lib/connectors/moysklad'
-import { CdekConnector } from '@/lib/connectors/cdek'
-import { BitrixConnector, YukassaConnector, TelegramConnector } from '@/lib/connectors/other'
+import { getConnector, MoyskladConnector } from '@/lib/connectors/factory'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-function getConnector(type: string) {
-  switch (type) {
-    case 'moysklad': return new MoyskladConnector()
-    case 'cdek':     return new CdekConnector()
-    case 'bitrix':   return new BitrixConnector()
-    case 'yukassa':  return new YukassaConnector()
-    case 'telegram': return new TelegramConnector()
-    default:         return null
-  }
-}
-
 export async function POST(
   req: NextRequest,
   { params }: { params: { type: string } }
 ) {
-  const startedAt = new Date().toISOString()
   const startMs = Date.now()
+  const startedAt = new Date().toISOString()
 
   try {
     const { type } = params
     const { seller_id } = await req.json()
+    if (!seller_id) return NextResponse.json({ error: 'seller_id обязателен' }, { status: 400 })
 
-    if (!seller_id) {
-      return NextResponse.json({ error: 'seller_id обязателен' }, { status: 400 })
-    }
-
-    // Get connector from DB
+    // Load connector from DB
     const { data: connectorRow, error: connErr } = await supabase
       .from('brand_connectors')
       .select('*')
@@ -47,20 +31,13 @@ export async function POST(
       .eq('type', type)
       .single()
 
-    if (connErr || !connectorRow) {
-      return NextResponse.json({ error: 'Коннектор не найден' }, { status: 404 })
-    }
-
-    if (connectorRow.status !== 'active') {
-      return NextResponse.json({ error: 'Коннектор не активен' }, { status: 422 })
-    }
+    if (connErr || !connectorRow) return NextResponse.json({ error: 'Коннектор не найден' }, { status: 404 })
+    if (connectorRow.status !== 'active') return NextResponse.json({ error: 'Коннектор не активен' }, { status: 422 })
 
     const connector = getConnector(type)
-    if (!connector) {
-      return NextResponse.json({ error: `Тип '${type}' не поддерживается` }, { status: 400 })
-    }
+    if (!connector) return NextResponse.json({ error: `Тип '${type}' не поддерживается` }, { status: 400 })
 
-    // Re-auth with stored credentials
+    // Re-auth
     const authResult = await connector.auth(connectorRow.credentials)
     if (!authResult.success) {
       await supabase.from('brand_connectors')
@@ -69,7 +46,7 @@ export async function POST(
       return NextResponse.json({ error: authResult.error }, { status: 422 })
     }
 
-    // Write sync log — running
+    // Write log — running
     const { data: logRow } = await supabase.from('connector_sync_log').insert({
       connector_id:   connectorRow.id,
       seller_id,
@@ -78,45 +55,52 @@ export async function POST(
       started_at:     startedAt,
     }).select('id').single()
 
-    // Run sync
+    // МойСклад — product upsert с внешним ID
+    if (type === 'moysklad') {
+      const ms = connector as MoyskladConnector;
+      (ms as any).onProductsBatch = async (products: any[]) => {
+        const rows = products.map(p => ({
+          seller_id:   p.seller_id,
+          external_id: p.external_id,
+          name:        p.name,
+          description: p.description,
+          price:       p.price,
+          sku:         p.sku,
+          is_active:   p.is_active,
+          updated_at:  p.updated_at,
+        }))
+        await supabase.from('products').upsert(rows, {
+          onConflict: 'seller_id,external_id',
+          ignoreDuplicates: false,
+        })
+      }
+    }
+
+    // Determine which sync method to call
     let syncResult = { success: false, recordsSynced: 0, error: '', details: {} as any }
 
     if (connector.syncProducts) {
-      // МойСклад — upsert products into Supabase
-      if (type === 'moysklad') {
-        const ms = connector as MoyskladConnector;
-        (ms as any).onProductsBatch = async (products: any[]) => {
-          await supabase.from('products').upsert(
-            products.map(p => ({
-              seller_id:   p.seller_id,
-              external_id: p.external_id,
-              name:        p.name,
-              description: p.description,
-              price:       p.price,
-              sku:         p.sku,
-              is_active:   p.is_active,
-              updated_at:  p.updated_at,
-            })),
-            { onConflict: 'seller_id,external_id', ignoreDuplicates: false }
-          )
-        }
-      }
-
       syncResult = await connector.syncProducts(seller_id) as any
     }
+    // For CRM connectors — sync customers
+    const connectorAny = connector as any
+    if (!syncResult.recordsSynced && connectorAny.syncCustomers) {
+      const r2 = await connectorAny.syncCustomers(seller_id)
+      if (r2.success) syncResult = r2
+    }
 
-    const finishedAt  = new Date().toISOString()
     const durationMs  = Date.now() - startMs
+    const finishedAt  = new Date().toISOString()
     const finalStatus = syncResult.success ? 'success' : 'error'
 
-    // Update sync log
+    // Update log
     if (logRow?.id) {
       await supabase.from('connector_sync_log').update({
-        status:          finalStatus,
-        records_synced:  syncResult.recordsSynced,
-        error_message:   syncResult.error || null,
-        finished_at:     finishedAt,
-        duration_ms:     durationMs,
+        status:         finalStatus,
+        records_synced: syncResult.recordsSynced,
+        error_message:  syncResult.error || null,
+        finished_at:    finishedAt,
+        duration_ms:    durationMs,
       }).eq('id', logRow.id)
     }
 
@@ -124,11 +108,11 @@ export async function POST(
     await supabase.from('brand_connectors').update({
       last_sync:            finishedAt,
       last_error:           syncResult.error || null,
-      synced_records_count: connectorRow.synced_records_count + syncResult.recordsSynced,
+      synced_records_count: (connectorRow.synced_records_count || 0) + syncResult.recordsSynced,
       status:               syncResult.success ? 'active' : 'error',
     }).eq('id', connectorRow.id)
 
-    // Create incident if error
+    // Create incident on error
     if (!syncResult.success) {
       await supabase.from('incidents').insert({
         seller_id,

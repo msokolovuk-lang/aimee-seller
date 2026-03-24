@@ -8,7 +8,7 @@ export type ConnectorType =
   | 'moysklad' | 'cdek' | 'bitrix' | 'amocrm' | 'retailcrm' | '1c'
   | 'tilda' | 'bitrixcms' | 'insales'
   | 'yukassa' | 'sbp' | 'tinkoff' | 'sber'
-  | 'unisender' | 'sendpulse' | 'smsru'
+  | 'yandex_delivery' | 'unisender' | 'sendpulse' | 'smsru'
   | 'metrika' | 'roistat' | 'telegram' | 'whatsapp'
   | 'atol' | 'mts_kassa' | 'evotor'
 

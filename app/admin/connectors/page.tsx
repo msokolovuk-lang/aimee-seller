@@ -55,6 +55,80 @@ const CATALOG = [
     docs: 'https://core.telegram.org/bots/api',
     hint: 'Создать бота: @BotFather → /newbot. Получить chat_id: @userinfobot',
   },
+,
+  {
+    type: 'amocrm', phase: 2, name: 'amoCRM', icon: '🗂️', category: 'CRM',
+    description: 'Лиды, воронка, история касаний. Двусторонняя синхронизация.',
+    fields: [
+      { key: 'access_token', label: 'Access Token', ph: 'eyJ0...' },
+      { key: 'domain',       label: 'Домен',        ph: 'company.amocrm.ru' },
+    ],
+    docs: 'https://www.amocrm.ru/developers/',
+  },
+  {
+    type: 'retailcrm', phase: 2, name: 'RetailCRM', icon: '🛒', category: 'CRM',
+    description: 'Заказы, статусы, сегментация, программа лояльности.',
+    fields: [
+      { key: 'api_key',  label: 'API Key',  ph: 'xxxxxxxxxxxxxxxx' },
+      { key: 'site_url', label: 'Site URL', ph: 'https://yourshop.retailcrm.ru' },
+    ],
+    docs: 'https://docs.retailcrm.ru/',
+  },
+  {
+    type: '1c', phase: 2, name: '1С (OData)', icon: '🏭', category: 'Учёт',
+    description: 'Номенклатура и остатки через REST-шлюз. Только чтение.',
+    fields: [
+      { key: 'base_url', label: 'OData URL', ph: 'http://server/base/odata/standard.odata' },
+      { key: 'login',    label: 'Логин',     ph: 'user' },
+      { key: 'password', label: 'Пароль',    ph: '••••' },
+    ],
+    docs: 'https://its.1c.ru/db/v8std/content/13987/hdoc',
+  },
+  {
+    type: 'yandex_delivery', phase: 2, name: 'Яндекс.Доставка', icon: '🚀', category: 'Доставка',
+    description: 'Расчёт, создание заказов, трекинг, курьерская доставка.',
+    fields: [
+      { key: 'oauth_token', label: 'OAuth Token', ph: 'y0_AgAAAA...' },
+    ],
+    docs: 'https://yandex.ru/dev/logistics/',
+  },
+  {
+    type: 'tinkoff', phase: 2, name: 'Тинькофф Касса', icon: '💳', category: 'Оплата',
+    description: 'Эквайринг + рассрочка + СБП. Комиссия от 1.2%.',
+    fields: [
+      { key: 'terminal_key', label: 'TerminalKey', ph: 'TinkoffBankTest' },
+      { key: 'secret_key',   label: 'SecretKey',   ph: 'секрет' },
+    ],
+    docs: 'https://www.tinkoff.ru/kassa/develop/',
+    sandbox: 'terminal_key=TinkoffBankTest, secret_key=TinkoffBankTest',
+  },
+  {
+    type: 'unisender', phase: 2, name: 'Unisender', icon: '📧', category: 'Email',
+    description: 'Триггерные рассылки: брошенная корзина, реактивация.',
+    fields: [
+      { key: 'api_key', label: 'API Key', ph: 'xxxxxxxxxxxxxxxx' },
+    ],
+    docs: 'https://www.unisender.com/ru/support/api/',
+  },
+  {
+    type: 'roistat', phase: 2, name: 'Roistat', icon: '📊', category: 'Аналитика',
+    description: 'Сквозная аналитика: расходы/доходы по каналам, ROI.',
+    fields: [
+      { key: 'project_id', label: 'Project ID', ph: '12345' },
+      { key: 'api_key',    label: 'API Key',    ph: 'xxxxxxxx' },
+    ],
+    docs: 'https://help.roistat.com/apidoc/',
+  },
+  {
+    type: 'whatsapp', phase: 2, name: 'WhatsApp Business', icon: '💬', category: 'Мессенджер',
+    description: 'Уведомления покупателям через Meta Cloud API.',
+    fields: [
+      { key: 'access_token',    label: 'Access Token',    ph: 'EAAxxxxx...' },
+      { key: 'phone_number_id', label: 'Phone Number ID', ph: '12345678901234' },
+    ],
+    docs: 'https://developers.facebook.com/docs/whatsapp/',
+    hint: 'Требует верификацию бизнеса Meta. Phone Number ID — в Meta Business Suite.',
+  },
 ]
 
 const PHASE_LABELS: Record<number, string> = { 1: '🔴 Фаза 1', 2: '🟡 Фаза 2', 3: '🟢 Фаза 3' }
@@ -204,7 +278,7 @@ export default function AdminConnectorsSetupPage() {
 
         {/* Connectors */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {CATALOG.map(item => {
+          {CATALOG.map((item) => { if (!item) return null;
             const conn = getConnector(item.type)
             const isActive = conn?.status === 'active'
             const isError = conn?.status === 'error'
