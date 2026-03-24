@@ -1,12 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 const C = {
   bg: '#F8F9FA', surface: '#FFFFFF', card: '#F3F4F6', border: '#E5E7EB',
@@ -77,16 +71,29 @@ export default function AdminConnectorsSetupPage() {
 
   useEffect(() => { load() }, [])
 
+  // Reload connectors when seller changes
+  useEffect(() => {
+    if (!selectedSeller) return
+    fetch(`/api/admin/connectors?seller_id=${selectedSeller}`)
+      .then(r => r.json())
+      .then(d => setConnectors(d.connectors || []))
+  }, [selectedSeller])
+
   const load = async () => {
     setLoading(true)
-    const [sellRes, connRes] = await Promise.all([
-      supabase.from('sellers').select('seller_id, brand_name'),
-      supabase.from('brand_connectors').select('*'),
-    ])
-    setSellers(sellRes.data || [])
-    setConnectors(connRes.data || [])
-    if (sellRes.data?.length && !selectedSeller) {
-      setSelectedSeller(sellRes.data[0].seller_id)
+    try {
+      const [sellRes, connRes] = await Promise.all([
+        fetch('/api/admin/sellers', { headers: { 'x-admin-secret': 'aimee-admin-2026' } }).then(r => r.json()),
+        selectedSeller ? fetch(`/api/admin/connectors?seller_id=${selectedSeller}`).then(r => r.json()) : Promise.resolve({ connectors: [] }),
+      ])
+      const sellersList = sellRes.sellers || []
+      setSellers(sellersList)
+      setConnectors(connRes.connectors || [])
+      if (sellersList.length && !selectedSeller) {
+        setSelectedSeller(sellersList[0].seller_id)
+      }
+    } catch(e) {
+      console.error('Load error:', e)
     }
     setLoading(false)
   }
@@ -149,11 +156,13 @@ export default function AdminConnectorsSetupPage() {
 
   const disconnect = async (type: string) => {
     if (!confirm(`Отключить ${type}?`)) return
-    await supabase.from('brand_connectors')
-      .update({ status: 'inactive', credentials: {} })
-      .eq('seller_id', selectedSeller)
-      .eq('type', type)
-    await load()
+    await fetch('/api/admin/connectors', {
+      method: 'DELETE',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ seller_id: selectedSeller, type }),
+    })
+    const d = await fetch(`/api/admin/connectors?seller_id=${selectedSeller}`).then(r => r.json())
+    setConnectors(d.connectors || [])
   }
 
   if (loading) return (
