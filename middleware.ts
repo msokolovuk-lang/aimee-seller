@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/admin', '/admin/finance', '/admin/integrations', '/api/ai-import', '/api/ai-import']
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/admin', '/admin/finance', '/admin/integrations', '/api/ai-import', '/api/ai-import', '/api/sdk']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
@@ -9,7 +9,7 @@ export async function middleware(req: NextRequest) {
   if (PUBLIC_PATHS.some(p => pathname.startsWith(p))) return NextResponse.next()
   if (pathname.startsWith('/api/admin')) return NextResponse.next()
   if (pathname.startsWith('/api/activity') || pathname.startsWith('/api/products')) return NextResponse.next()
-  if (pathname.startsWith('/_next') || pathname.startsWith('/favicon')) return NextResponse.next()
+  if (pathname === '/sdk.js' || pathname.startsWith('/_next') || pathname.startsWith('/favicon')) return NextResponse.next()
 
   const token = req.cookies.get('seller_token')?.value
 
